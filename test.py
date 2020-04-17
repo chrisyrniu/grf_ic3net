@@ -65,16 +65,10 @@ parser.add_argument('--nactions', default='1', type=str,
 parser.add_argument('--action_scale', default=1.0, type=float,
                     help='scale action output from model')
 # other
-parser.add_argument('--plot', action='store_true', default=False,
-                    help='plot training progress')
-parser.add_argument('--plot_env', default='main', type=str,
-                    help='plot env name')
-parser.add_argument('--save', action="store_true", default=False,
-                    help='save the model after training')
-parser.add_argument('--save_every', default=0, type=int,
-                    help='save the model after every n_th epoch')
-parser.add_argument('--load', default='', type=str,
-                    help='load the model')
+parser.add_argument('--run_num', default=1, type=int,
+                    help='load models in which run')
+parser.add_argument('--ep_num', default=100, type=int,
+                    help='load models saved from which epoch')
 parser.add_argument('--display', action="store_true", default=False,
                     help='Display environment state')
 
@@ -191,63 +185,28 @@ disp_trainer.display = True
 def disp():
     x = disp_trainer.get_episode()
 
-log = dict()
-log['epoch'] = LogField(list(), False, None, None)
-log['reward'] = LogField(list(), True, 'epoch', 'num_episodes')
-log['enemy_reward'] = LogField(list(), True, 'epoch', 'num_episodes')
-log['success'] = LogField(list(), True, 'epoch', 'num_episodes')
-log['steps_taken'] = LogField(list(), True, 'epoch', 'num_episodes')
-log['add_rate'] = LogField(list(), True, 'epoch', 'num_episodes')
-log['comm_action'] = LogField(list(), True, 'epoch', 'num_steps')
-log['enemy_comm'] = LogField(list(), True, 'epoch', 'num_steps')
-log['value_loss'] = LogField(list(), True, 'epoch', 'num_steps')
-log['action_loss'] = LogField(list(), True, 'epoch', 'num_steps')
-log['entropy'] = LogField(list(), True, 'epoch', 'num_steps')
-
-if args.plot:
-    vis = visdom.Visdom(env=args.plot_env)
-
 if args.ic3net:
     model_dir = Path('./saved') / args.env_name / 'ic3net'
 if args.commnet:
     model_dir = Path('./saved') / args.env_name / 'commnet'
 if args.env_name == 'grf':
     model_dir = model_dir / args.scenario
-if not model_dir.exists():
-    curr_run = 'run1'
-else:
-    exst_run_nums = [int(str(folder.name).split('run')[1]) for folder in
-                     model_dir.iterdir() if
-                     str(folder.name).startswith('run')]
-    if len(exst_run_nums) == 0:
-        curr_run = 'run1'
-    else:
-        curr_run = 'run%i' % (max(exst_run_nums) + 1)
+curr_run = 'run' + str(args.run_num)
+
 run_dir = model_dir / curr_run 
     
 def run(num_epochs): 
-    if args.save:
-        os.makedirs(run_dir)
     for ep in range(num_epochs):
         epoch_begin_time = time.time()
-        stat = dict()
         for n in range(args.epoch_size):
             if n == args.epoch_size - 1 and args.display:
                 trainer.display = True
-            s = trainer.train_batch(ep)
+            batch, stat = trainer.run_batch(ep)
             print('batch: ', n)
-            merge_stat(s, stat)
             trainer.display = False
 
         epoch_time = time.time() - epoch_begin_time
         epoch = len(log['epoch'].data) + 1
-        for k, v in log.items():
-            if k == 'epoch':
-                v.data.append(epoch)
-            else:
-                if k in stat and v.divide_by is not None and stat[v.divide_by] > 0:
-                    stat[k] = stat[k] / stat[v.divide_by]
-                v.data.append(stat.get(k, 0))
 
         np.set_printoptions(precision=2)
 
@@ -255,46 +214,10 @@ def run(num_epochs):
                 epoch, stat['reward'], epoch_time
         ))
 
-        if 'enemy_reward' in stat.keys():
-            print('Enemy-Reward: {}'.format(stat['enemy_reward']))
-        if 'add_rate' in stat.keys():
-            print('Add-Rate: {:.2f}'.format(stat['add_rate']))
-        if 'success' in stat.keys():
-            print('Success: {:.2f}'.format(stat['success']))
-        if 'steps_taken' in stat.keys():
-            print('Steps-taken: {:.2f}'.format(stat['steps_taken']))
-        if 'comm_action' in stat.keys():
-            print('Comm-Action: {}'.format(stat['comm_action']))
-        if 'enemy_comm' in stat.keys():
-            print('Enemy-Comm: {}'.format(stat['enemy_comm']))
-
-        if args.plot:
-            for k, v in log.items():
-                if v.plot and len(v.data) > 0:
-                    vis.line(np.asarray(v.data), np.asarray(log[v.x_axis].data[-len(v.data):]),
-                    win=k, opts=dict(xlabel=v.x_axis, ylabel=k))
-    
-        if args.save_every and ep and args.save and ep % args.save_every == 0:
-            save(final=False, episode=ep)
-
-        if args.save:
-            save(final=True)
-
-def save(final, episode=0): 
-    d = dict()
-    d['policy_net'] = policy_net.state_dict()
-    d['log'] = log
-    d['trainer'] = trainer.state_dict()
-    if final:
-        torch.save(d, run_dir / 'model.pt')
-    else:
-        torch.save(d, run_dir / ('model_ep%i.pt' %(episode)))
-
 def load(path):
     d = torch.load(path)
     # log.clear()
     policy_net.load_state_dict(d['policy_net'])
-    log.update(d['log'])
     trainer.load_state_dict(d['trainer'])
 
 def signal_handler(signal, frame):
@@ -305,15 +228,16 @@ def signal_handler(signal, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
-if args.load != '':
-    load(args.load)
+if args.ep_num == 0:
+    path = run_dir / 'model.pt'
+else:
+    path = run_dir / ('model_ep%i.pt' %(args.ep_num))
+    
+load(path)
 
 run(args.num_epochs)
 if args.display:
     env.end_display()
-
-if args.save:
-    save(final=True)
 
 if sys.flags.interactive == 0 and args.nprocesses > 1:
     trainer.quit()
