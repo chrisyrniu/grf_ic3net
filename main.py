@@ -134,6 +134,8 @@ if hasattr(args, 'enemy_comm') and args.enemy_comm:
     else:
         raise RuntimeError("Env. needs to pass argument 'nenemy'.")
 
+render = args.render
+args.render = False
 env = data.init(args.env_name, args, False)
 
 num_inputs = env.observation_dim
@@ -181,15 +183,16 @@ if not args.display:
 for p in policy_net.parameters():
     p.data.share_memory_()
 
-if args.nprocesses > 1:
-    trainer = MultiProcessTrainer(args, lambda: Trainer(args, policy_net, data.init(args.env_name, args)))
-else:
-    trainer = Trainer(args, policy_net, data.init(args.env_name, args))
-
 disp_trainer = Trainer(args, policy_net, data.init(args.env_name, args, False))
 disp_trainer.display = True
 def disp():
     x = disp_trainer.get_episode()
+
+args.render = render
+if args.nprocesses > 1:
+    trainer = MultiProcessTrainer(args, lambda: Trainer(args, policy_net, data.init(args.env_name, args)))
+else:
+    trainer = Trainer(args, policy_net, data.init(args.env_name, args))
 
 log = dict()
 log['epoch'] = LogField(list(), False, None, None)
