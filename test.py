@@ -80,7 +80,7 @@ parser.add_argument('--random', action='store_true', default=False,
 parser.add_argument('--commnet', action='store_true', default=False,
                     help="enable commnet model")
 parser.add_argument('--ic3net', action='store_true', default=False,
-                    help="enable commnet model")
+                    help="enable ic3net model")
 parser.add_argument('--nagents', type=int, default=1,
                     help="Number of agents (used in multiagent)")
 parser.add_argument('--comm_mode', type=str, default='avg',
@@ -192,7 +192,7 @@ else:
 
 if args.ic3net:
     model_dir = Path('./saved') / args.env_name / 'ic3net'
-if args.commnet:
+if args.commnet and not args.ic3net:
     model_dir = Path('./saved') / args.env_name / 'commnet'
 if args.env_name == 'grf':
     model_dir = model_dir / args.scenario
