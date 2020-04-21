@@ -211,7 +211,7 @@ def run(num_epochs):
             trainer.display = False
 
         epoch_time = time.time() - epoch_begin_time
-        epoch = len(log['epoch'].data) + 1
+        epoch = ep + 1
 
         np.set_printoptions(precision=2)
 
