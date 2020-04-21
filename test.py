@@ -29,7 +29,7 @@ parser = argparse.ArgumentParser(description='PyTorch RL trainer')
 # note: number of steps per epoch = epoch_size X batch_size x nprocesses
 parser.add_argument('--num_epochs', default=100, type=int,
                     help='number of training epochs')
-parser.add_argument('--epoch_size', type=int, default=10,
+parser.add_argument('--epoch_size', type=int, default=1,
                     help='number of update iterations in an epoch')
 parser.add_argument('--batch_size', type=int, default=500,
                     help='number of steps before each update (per thread)')
@@ -203,11 +203,13 @@ run_dir = model_dir / curr_run
 def run(num_epochs): 
     for ep in range(num_epochs):
         epoch_begin_time = time.time()
+        stat = dict()
         for n in range(args.epoch_size):
             if n == args.epoch_size - 1 and args.display:
                 trainer.display = True
-            batch, stat = trainer.run_batch(ep)
+            batch, s = trainer.run_batch(ep)
             print('batch: ', n)
+            merge_stat(s, stat)
             trainer.display = False
 
         epoch_time = time.time() - epoch_begin_time
@@ -216,7 +218,7 @@ def run(num_epochs):
         np.set_printoptions(precision=2)
 
         print('Epoch {}\tReward {}\tTime {:.2f}s'.format(
-                epoch, stat['reward'], epoch_time
+                epoch, stat['reward']/stat['num_episodes'], epoch_time
         ))
 
 def load(path):
