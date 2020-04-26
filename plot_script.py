@@ -6,10 +6,10 @@ import sys
 import glob
 
 colors_map = {
-    'semi-commnet': '#dc8d6d',
+    'ic3net': '#dc8d6d',
     'commnet': '#5785c1',
-    'semi-mlp': '#78b38a',
-    'mlp': '#ba71af'
+    'maddpg': '#78b38a',
+    'maac': '#ba71af'
 }
 
 def read_file(vec, file_name, scalar, term):
@@ -34,7 +34,7 @@ def read_file(vec, file_name, scalar, term):
                 floats = line.split('\t')[1]
                 left_bracket = floats.find('[')
                 right_bracket = floats.find(']')
-                floats = np.fromstring(floats[left_bracket + 2:right_bracket], dtype=float, sep=' ')
+                floats = np.fromstring(floats[left_bracket + 1:right_bracket], dtype=float, sep=' ')
 
                 if epoch > len(vec):
                     vec.append([floats.mean()])
@@ -47,40 +47,24 @@ def read_file(vec, file_name, scalar, term):
                 else:
                     vec[epoch - 1].append(float(floats.split(' ')[-1].strip()))
 
-                # if term == 'Mean':
-                #     vec.append(float(floats.split(' ')[2]))
-                # elif term == 'Success':
-                #     vec.append(float(floats.split(' ')[1].strip()))
-                # else:
-                #     raise RuntimeError("Unkown term used as line parser.")
-
     return vec
 
-number = 1
-
 def parse_plot(files, scalar=False, term='Epoch'):
-    global number
-    fig = plt.subplot(6, 1, number)
-    number += 2
     coll = dict()
     for fname in files:
         f = fname.split('.')
-        if 'semi' in fname and 'commnet' in fname:
-            label = 'semi-commnet'
+        if 'ic3net' in fname:
+            label = 'ic3net'
         elif 'commnet' in fname:
             label = 'commnet'
-        elif 'semi' in fname and 'mlp' in fname:
-            label = 'semi-mlp'
+        elif 'maac' in fname:
+            label = 'maac'
         else:
-            label = 'mlp'
+            label = 'maddpg'
 
         if label not in coll:
             coll[label] = []
 
-        # if len(f) == 2:
-        #     label = f[0]
-        # else:
-        #     label = '-'.join(f[0].split('_')[1:])
         coll[label] = read_file(coll[label], fname, scalar, term)
 
     for label in coll.keys():
@@ -96,7 +80,7 @@ def parse_plot(files, scalar=False, term='Epoch'):
             if term == 'Success':
                 mean *= 100
             mean_values.append(mean)
-            variance = np.var(val)
+            variance = np.std(val)
 
             if term == 'Success':
                 variance *= 100
@@ -104,26 +88,24 @@ def parse_plot(files, scalar=False, term='Epoch'):
             max_values.append(mean + variance)
             min_values.append(mean - variance)
 
-        fig.plot(np.arange(len(coll[label])), mean_values, linewidth=1.5, label=label, color=colors_map[label])
-        fig.fill_between(np.arange(len(coll[label])), min_values, max_values, color=colors.to_rgba(colors_map[label], alpha=0.2))
+        plt.plot(np.arange(len(coll[label])), mean_values, linewidth=1.5, label=label, color=colors_map[label])
+        plt.fill_between(np.arange(len(coll[label])), min_values, max_values, color=colors.to_rgba(colors_map[label], alpha=0.2))
 
     term = 'Rewards' if term == 'Epoch' else term
 
-    fig.set_xlabel('Epochs')
-    fig.set_ylabel(term)
-    fig.legend()
-    fig.grid()
-    fig.set_title('StarCraft {} {}'.format(sys.argv[2], term))
+    plt.xlabel('Epochs')
+    plt.ylabel(term)
+    plt.legend()
+    plt.grid()
+    plt.title('GFootball {} {}'.format(sys.argv[2], term))
 
 files = glob.glob(sys.argv[1] + "*")
 files = list(filter(lambda x: x.find(".pt") == -1, files))
 
-# rewards
-parse_plot(files, False, 'Epoch')
-
-# success
-parse_plot(files, True, 'Success')
-
-# steps
-parse_plot(files, True, 'Steps taken')
+# 'Epoch'/ 'Steps-taken'
+term = sys.argv[3]
+scalar = False
+if term != 'Epoch':
+    scalar = True
+parse_plot(files, scalar, term)
 plt.show()
