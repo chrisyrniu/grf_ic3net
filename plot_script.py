@@ -12,7 +12,7 @@ colors_map = {
     'maac': '#ba71af'
 }
 
-def read_file(vec, file_name, scalar, term):
+def read_file(vec, file_name, term):
     print(file_name)
     with open(file_name, 'r') as f:
         lines = f.readlines()
@@ -30,27 +30,32 @@ def read_file(vec, file_name, scalar, term):
                 epoch_line = lines[epoch_idx]
 
             epoch = int(epoch_line.split(' ')[1].split('\t')[0])
-            if not scalar:
-                floats = line.split('\t')[1]
-                left_bracket = floats.find('[')
-                right_bracket = floats.find(']')
-                floats = np.fromstring(floats[left_bracket + 1:right_bracket], dtype=float, sep=' ')
 
-                if epoch > len(vec):
-                    vec.append([floats.mean()])
-                else:
-                    vec[epoch - 1].append(floats.mean())
-            else:
+            floats = line.split('\t')[0]
+            left_bracket = floats.find('[')
+            right_bracket = floats.find(']')
+
+            if left_bracket == -1 and left_bracket == -1:
+
                 floats = line.split('\t')[0]
                 if epoch > len(vec):
                     vec.append([float(floats.split(' ')[-1].strip())])
                 else:
                     vec[epoch - 1].append(float(floats.split(' ')[-1].strip()))
 
+            else:
+                floats = np.fromstring(floats[left_bracket + 1:right_bracket], dtype=float, sep=' ')
+
+                if epoch > len(vec):
+                    vec.append([floats.mean()])
+                else:
+                    vec[epoch - 1].append(floats.mean())
+
     return vec
 
-def parse_plot(files, scalar=False, term='Epoch'):
+def parse_plot(files, term='Reward'):
     coll = dict()
+    episode_coll = dict()
     for fname in files:
         f = fname.split('.')
         if 'ic3net' in fname:
@@ -64,11 +69,14 @@ def parse_plot(files, scalar=False, term='Epoch'):
 
         if label not in coll:
             coll[label] = []
+            episode_coll[label] = []
 
-        coll[label] = read_file(coll[label], fname, scalar, term)
+        coll[label] = read_file(coll[label], fname, term)
+        episode_coll[label] = read_file(episode_coll[label], fname, 'Episode')
 
     for label in coll.keys():
         coll[label] = coll[label][:1000]
+        episode_coll[label] = episode_coll[label][:1000]
 
         mean_values = []
         max_values = []
@@ -88,12 +96,17 @@ def parse_plot(files, scalar=False, term='Epoch'):
             max_values.append(mean + variance)
             min_values.append(mean - variance)
 
-        plt.plot(np.arange(len(coll[label])), mean_values, linewidth=1.5, label=label, color=colors_map[label])
-        plt.fill_between(np.arange(len(coll[label])), min_values, max_values, color=colors.to_rgba(colors_map[label], alpha=0.2))
+        mean_episodes = []
+        for epi_val in episode_coll[label]:
+            mean_episodes.append(sum(epi_val) / len(epi_val))
 
-    term = 'Rewards' if term == 'Epoch' else term
+        # plt.plot(np.arange(len(coll[label])), mean_values, linewidth=1.5, label=label, color=colors_map[label])
+        # plt.fill_between(np.arange(len(coll[label])), min_values, max_values, color=colors.to_rgba(colors_map[label], alpha=0.2))
 
-    plt.xlabel('Epochs')
+        plt.plot(mean_episodes, mean_values, linewidth=1.5, label=label, color=colors_map[label])
+        plt.fill_between(mean_episodes, min_values, max_values, color=colors.to_rgba(colors_map[label], alpha=0.2))
+
+    plt.xlabel('Episodes')
     plt.ylabel(term)
     plt.legend()
     plt.grid()
@@ -104,8 +117,5 @@ files = list(filter(lambda x: x.find(".pt") == -1, files))
 
 # 'Epoch'/ 'Steps-taken'
 term = sys.argv[3]
-scalar = False
-if term != 'Epoch':
-    scalar = True
-parse_plot(files, scalar, term)
+parse_plot(files, term)
 plt.show()
