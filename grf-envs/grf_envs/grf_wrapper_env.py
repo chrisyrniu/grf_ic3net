@@ -69,6 +69,7 @@ class GRFWrapperEnv(gym.Env):
    
     # check epoch arg
     def reset(self):
+        self.stat = dict()
         obs = self.env.reset()
         if self.num_controlled_agents == 1:
             obs = obs.reshape(1, -1)
@@ -83,6 +84,7 @@ class GRFWrapperEnv(gym.Env):
         rewards = r
         dones = d
         infos = i
+        self.stat['success'] = infos['score_reward']
         
         return next_obs, rewards, dones, infos
         
