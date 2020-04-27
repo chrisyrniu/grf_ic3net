@@ -100,13 +100,13 @@ def parse_plot(files, term='Reward'):
         for epi_val in episode_coll[label]:
             mean_episodes.append(sum(epi_val) / len(epi_val))
 
-        # plt.plot(np.arange(len(coll[label])), mean_values, linewidth=1.5, label=label, color=colors_map[label])
-        # plt.fill_between(np.arange(len(coll[label])), min_values, max_values, color=colors.to_rgba(colors_map[label], alpha=0.2))
+        plt.plot(np.arange(len(coll[label])), mean_values, linewidth=1.5, label=label, color=colors_map[label])
+        plt.fill_between(np.arange(len(coll[label])), min_values, max_values, color=colors.to_rgba(colors_map[label], alpha=0.2))
 
-        plt.plot(mean_episodes, mean_values, linewidth=1.5, label=label, color=colors_map[label])
-        plt.fill_between(mean_episodes, min_values, max_values, color=colors.to_rgba(colors_map[label], alpha=0.2))
+        # plt.plot(mean_episodes, mean_values, linewidth=1.5, label=label, color=colors_map[label])
+        # plt.fill_between(mean_episodes, min_values, max_values, color=colors.to_rgba(colors_map[label], alpha=0.2))
 
-    plt.xlabel('Episodes')
+    plt.xlabel('Epochs')
     plt.ylabel(term)
     plt.legend()
     plt.grid()
