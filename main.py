@@ -229,6 +229,7 @@ else:
 run_dir = model_dir / curr_run 
     
 def run(num_epochs): 
+    num_episodes = 0
     if args.save:
         os.makedirs(run_dir)
     for ep in range(num_epochs):
@@ -244,6 +245,7 @@ def run(num_epochs):
 
         epoch_time = time.time() - epoch_begin_time
         epoch = len(log['epoch'].data) + 1
+        num_episodes += stat['num_episodes']
         for k, v in log.items():
             if k == 'epoch':
                 v.data.append(epoch)
@@ -253,11 +255,12 @@ def run(num_epochs):
                 v.data.append(stat.get(k, 0))
 
         np.set_printoptions(precision=2)
-
-        print('Epoch {}\tReward {}\tTime {:.2f}s'.format(
-                epoch, stat['reward'], epoch_time
-        ))
-
+        
+        print('Epoch {}'.format(epoch))
+        print('Episode: {}'.format(num_episodes))
+        print('Reward: {}'.format(stat['reward']))
+        print('Time: {:.2f}s'.format(epoch_time))
+        
         if 'enemy_reward' in stat.keys():
             print('Enemy-Reward: {}'.format(stat['enemy_reward']))
         if 'add_rate' in stat.keys():
@@ -265,7 +268,7 @@ def run(num_epochs):
         if 'success' in stat.keys():
             print('Success: {:.2f}'.format(stat['success']))
         if 'steps_taken' in stat.keys():
-            print('Steps-taken: {:.2f}'.format(stat['steps_taken']))
+            print('Steps-Taken: {:.2f}'.format(stat['steps_taken']))
         if 'comm_action' in stat.keys():
             print('Comm-Action: {}'.format(stat['comm_action']))
         if 'enemy_comm' in stat.keys():
