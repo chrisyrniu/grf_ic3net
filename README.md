@@ -1,4 +1,4 @@
-# MAAC in Google Research Football
+# IC3Net and CommNet in Google Research Football
 IC3Net and CommNet implementation in Google Research Football
 
 ## Requirements
