@@ -17,7 +17,7 @@ IC3Net and CommNet implementation in Google Research Football
 ## Run Testing
 `sh run_test.sh`
 
-## Check Training Processing and Results
+## Check Training Process and Results
 * Use visdom
 * Use plot_script.py and saved log file:
 
